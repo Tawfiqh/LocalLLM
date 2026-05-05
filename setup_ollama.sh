@@ -21,7 +21,14 @@ if [[ ! -f "$ROOT/Brewfile" ]]; then
   exit 1
 fi
 
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Running the brew bundle command to install the dependencies
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 brew bundle
+
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Pulling the desired ollama model
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 ollama pull $OLLAMA_MODEL
 
 echo "✅ Done."
