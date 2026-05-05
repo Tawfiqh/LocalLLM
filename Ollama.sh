@@ -3,24 +3,12 @@
 
 # Run Ollama and start the Open WebUI on :8080. Default: Open WebUI on :8080.
 # --ollama-only = exit after starting ollama server -- doesn't run the Open WebUI
-# (for ./run.sh).
+# (used by ./run.sh).
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Checking if the ollama command is available - otherwise run the setup_ollama.sh script to install it
-#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-if ! command -v ollama >/dev/null 2>&1; then
-  if [[ -f "$ROOT/setup_ollama.sh" ]]; then
-    echo "ollama not found; running setup_ollama.sh (Homebrew + Brewfile)…" >&2
-    bash "$ROOT/setup_ollama.sh" || exit 1
-  fi
-  if ! command -v ollama >/dev/null 2>&1; then
-    echo "error: ollama is not available. Install: https://ollama.com/download" >&2
-    exit 1
-  fi
-fi
+# Expects Ollama to be installed via Homebrew and the Brewfile -- run run.sh to run and install everything
 
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 # Checking if the ollama-only flag is set
@@ -110,4 +98,41 @@ command -v uv >/dev/null 2>&1 || { echo "error: uv is not installed. See https:/
 #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 echo "🌐 Starting Open WebUI — http://127.0.0.1:8080/"
 export DATA_DIR="${DATA_DIR:-$HOME/.open-webui}"
-uv run --with open-webui --with greenlet open-webui serve
+
+# Ensure DATA_DIR exists and is writable before launching.
+if ! mkdir -p "$DATA_DIR" 2>/dev/null; then
+  echo "error: Could not create DATA_DIR at '$DATA_DIR'" >&2
+  exit 1
+fi
+if [[ ! -w "$DATA_DIR" ]]; then
+  echo "error: DATA_DIR is not writable: '$DATA_DIR'" >&2
+  exit 1
+fi
+
+# uv run uses a managed environment, but still needs a working Python toolchain.
+if ! command -v python3 >/dev/null 2>&1; then
+  cat <<'EOF' >&2
+error: python3 is required to run Open WebUI with uv.
+
+Try:
+  - macOS: brew install python
+  - then rerun: ./Ollama.sh
+EOF
+  exit 1
+fi
+
+if ! uv run --with open-webui --with greenlet open-webui serve; then
+  cat <<'EOF' >&2
+error: Failed to start Open WebUI via uv.
+
+Common fixes:
+  1) Ensure uv can manage Python:
+       uv python list
+       uv python install 3.11
+  2) Retry launch:
+       ./Ollama.sh
+  3) If it still fails, run with verbose output:
+       UV_LOG=debug uv run --with open-webui --with greenlet open-webui serve
+EOF
+  exit 1
+fi
