@@ -2,3 +2,4 @@
 .env
 .ollama-serve.log
 .webui_secret_key
+.ollama-serve.log
